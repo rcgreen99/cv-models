@@ -11,6 +11,8 @@ class VGG19(nn.Module):
     def __init__(self, num_classes: int) -> None:
         super().__init__()
 
+        self.num_classes = num_classes
+
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
@@ -55,10 +57,11 @@ class VGG19(nn.Module):
         )
         self.maxpool = nn.MaxPool2d((2, 2), stride=2)
         self.classifier = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(512 * 7 * 7, 4096),
             nn.Linear(4096, 4096),
-            nn.Linear(4096, 1000),
-            nn.Softmax(),
+            nn.Linear(4096, self.num_classes),
+            nn.Softmax(dim=1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -97,7 +100,6 @@ class VGG19(nn.Module):
 
         # Classifier
         x = self.classifier(x)
-        assert x.shape == (batch_size, 1000)
 
         return x
 
