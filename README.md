@@ -4,7 +4,7 @@ Timeline
 
 2012 - AlexNet - Breakthrough in ImageNet Challenge using Neural Networks
 
-2014 - VGG - 
+2014 - VGG - Extended length of CNN's. Enabled by using smaller kernel's (3x3).
 
 2015 - ResNet - Added residual connections which allowed for better and deeper models
 
