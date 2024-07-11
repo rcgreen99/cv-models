@@ -2,28 +2,23 @@ import torch
 from torch import nn
 
 
-class ResNet(nn.Module):
+# FIXME: Each conv layer (2-5) should actually be duplicated in the forward pass
+class ResNet18(nn.Module):
     """
     Implementation of ResNet model
     """
 
-    def __init__(self, in_channels: int, num_classes: int, resnet_depth: int) -> None:
+    def __init__(self, in_channels: int, num_classes: int) -> None:
         """
         Initialize ResNet model
 
         Args:
+            in_channels: int, number of input channels
             num_classes: int, number of classes in the dataset
-            resnet_depth: int, depth of resnet
-                available options: 18, 34, 50, 101, 152
         """
         super().__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.resnet_depth = resnet_depth
-
-        # self.stem = self.get_stem(in_channels)
-        # self.features = self.get_features(resnet_depth)
-        # self.classifier = self.get_classifier(num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -35,10 +30,6 @@ class ResNet(nn.Module):
         Returns:
             torch.Tensor, output tensor
         """
-        # x = self.stem(x)
-        # x = self.features(x)
-        # x = self.classifier(x)
-
         batch_size = x.size(0)
 
         # stem
@@ -121,42 +112,17 @@ class ResNet(nn.Module):
 
         # classifier
         x = nn.AvgPool2d(7, 1)(x)
-        x = x.view(x.size(0), -1)
+        x = nn.Flatten()(x)
         x = nn.Linear(512, self.num_classes)(x)
         x = nn.Softmax(dim=1)(x)
         assert x.shape == (batch_size, self.num_classes)
 
         return x
 
-    def get_stem(self, in_channels: int = 3) -> nn.Sequential:
-        """
-        Returns the stem layer for ResNet
-        """
-        return nn.Sequential(
-            # unknown stride and padding
-            nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=7),
-            nn.BatchNorm2d(2, 2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-        )
-
-    def get_features(self, resnet_depth: int) -> nn.Sequential:
-        """
-        Based on the depth of resnet, return the feature extractor
-        """
-        pass
-
-    def get_classifier(self, num_classes: int) -> nn.Sequential:
-        """
-        Return the classifier
-        """
-        return None
-
 
 if __name__ == "__main__":
     batch_size = 16
     num_classes = 10
-    resnet_size = 18
-    model = ResNet(3, num_classes, resnet_size)
+    model = ResNet18(3, num_classes)
     model.forward(torch.rand(batch_size, 3, 224, 224))
     print("Model forward pass successful!")
