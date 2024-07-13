@@ -1,3 +1,4 @@
+from typing import List
 from dataclasses import dataclass
 
 
@@ -16,10 +17,8 @@ class ResNetConfig:
     """
 
     block_type: str
-    second_conv_count: int
-    third_conv_count: int
-    fourth_conv_count: int
-    five_conv_count: int
+
+    num_blocks_per_stage: List[int]
 
     def __post_init__(self):
         assert self.block_type in ["basic", "bottleneck"]
@@ -32,10 +31,13 @@ class ResNetConfig:
         return resnet_size_to_config_dict[resnet_size]
 
 
+# Dictionary to map resnet size to ResNetConfig
+# 18 and 34 are use BasicBlocks ResNet models
+# 50, 101, and 152 use BottleNeckBlocks ResNet models
 resnet_size_to_config_dict = {
-    18: ResNetConfig("basic", 2, 2, 2, 2),
-    35: ResNetConfig("basic", 3, 4, 6, 3),
-    50: ResNetConfig("bottleneck", 3, 4, 6, 3),
-    101: ResNetConfig("bottleneck", 3, 4, 23, 3),
-    152: ResNetConfig("bottleneck", 3, 8, 36, 3),
+    18: ResNetConfig("basic", [2, 2, 2, 2]),
+    34: ResNetConfig("basic", [3, 4, 6, 3]),
+    50: ResNetConfig("bottleneck", [3, 4, 6, 3]),
+    101: ResNetConfig("bottleneck", [3, 4, 23, 3]),
+    152: ResNetConfig("bottleneck", [3, 8, 36, 3]),
 }
