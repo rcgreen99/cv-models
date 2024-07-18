@@ -17,8 +17,8 @@ class ResNetConfig:
     """
 
     block_type: str
-
     num_blocks_per_stage: List[int]
+    num_final_features: int
 
     def __post_init__(self):
         assert self.block_type in ["basic", "bottleneck"]
@@ -35,9 +35,9 @@ class ResNetConfig:
 # 18 and 34 are use BasicBlocks ResNet models
 # 50, 101, and 152 use BottleNeckBlocks ResNet models
 resnet_size_to_config_dict = {
-    18: ResNetConfig("basic", [2, 2, 2, 2]),
-    34: ResNetConfig("basic", [3, 4, 6, 3]),
-    50: ResNetConfig("bottleneck", [3, 4, 6, 3]),
-    101: ResNetConfig("bottleneck", [3, 4, 23, 3]),
-    152: ResNetConfig("bottleneck", [3, 8, 36, 3]),
+    18: ResNetConfig("basic", [2, 2, 2, 2], 512),
+    34: ResNetConfig("basic", [3, 4, 6, 3], 512),
+    50: ResNetConfig("bottleneck", [3, 4, 6, 3], 2048),
+    101: ResNetConfig("bottleneck", [3, 4, 23, 3], 2048),
+    152: ResNetConfig("bottleneck", [3, 8, 36, 3], 2048),
 }

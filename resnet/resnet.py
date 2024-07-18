@@ -28,7 +28,9 @@ class ResNet(nn.Module):
 
         self.stem = self.get_stem(in_channels)
         self.features = self.get_features(self.resnet_config)
-        self.classifier = self.get_classifier(num_classes)
+        self.classifier = self.get_classifier(
+            num_classes, self.resnet_config.num_final_features
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -44,7 +46,7 @@ class ResNet(nn.Module):
         x = self.stem(x)
         assert x.shape == (batch_size, 64, 56, 56)
         x = self.features(x)
-        assert x.shape == (batch_size, 512, 7, 7)
+        assert x.shape == (batch_size, self.resnet_config.num_final_features, 7, 7)
         x = self.classifier(x)
         assert x.shape == (batch_size, self.num_classes)
         return x
@@ -78,12 +80,14 @@ class ResNet(nn.Module):
         if resnet_config.block_type == "basic":
             return self.build_basic_block_resnet(resnet_config)
         elif resnet_config.block_type == "bottleneck":
-            raise NotImplementedError("BottleneckBlock not implemented yet")
-            # return self.build_bottlenekc_block_resnet(resnet_config)
+            return self.build_bottleneck_block_resnet(resnet_config)
         else:
             raise ValueError("Invalid block type")
 
     def build_basic_block_resnet(self, resnet_config: ResNetConfig):
+        """
+        Builds a ResNet model with basic blocks (either 18 or 34)
+        """
         features = nn.Sequential()
         in_features = 64
         for conv_layer_idx in range(4):  # 4 conv layers after stem
@@ -98,15 +102,40 @@ class ResNet(nn.Module):
                 )
         return features
 
-    def get_classifier(self, num_classes: int) -> nn.Sequential:
+    def build_bottleneck_block_resnet(self, resnet_config: ResNetConfig):
         """
-        Return the classifier
+        Builds a ResNet model with bottleneck blocks (50, 101, 152)
+        """
+        features = nn.Sequential()
+        downsample = False
+        in_features = 64
+        for conv_layer_idx in range(4):  # 4 conv layers after stem
+            num_blocks = resnet_config.num_blocks_per_stage[conv_layer_idx]
+            out_features = 64 * 2 ** (conv_layer_idx + 2)
+            for block_idx in range(num_blocks):
+                # print(in_features, out_features)
+                downsample = False
+                if (
+                    block_idx == num_blocks - 1 and conv_layer_idx > 0
+                ):  # is last layer, and not first conv layer
+                    downsample = True
+                features.add_module(
+                    f"block{conv_layer_idx + 2}_{block_idx}",
+                    BottleneckBlock(in_features, out_features, downsample),
+                )
+                if block_idx == 0:
+                    in_features = out_features
+        return features
+
+    def get_classifier(self, num_classes: int, num_features: int) -> nn.Sequential:
+        """
+        Returns the classifier
         """
         # classifier
         return nn.Sequential(
             nn.AvgPool2d(7, 1),
             nn.Flatten(),
-            nn.Linear(512, num_classes),
+            nn.Linear(num_features, num_classes),
             nn.Softmax(dim=1),
         )
 
@@ -114,22 +143,7 @@ class ResNet(nn.Module):
 if __name__ == "__main__":
     BATCH_SIZE = 16
     NUM_CLASSES = 10
-    RESNET_SIZE = 34
+    RESNET_SIZE = 50
     model = ResNet(3, NUM_CLASSES, RESNET_SIZE)
     model.forward(torch.rand(BATCH_SIZE, 3, 224, 224))
     print("Model forward pass successful!")
-
-    # return nn.Sequential(
-    #     # Conv 2
-    #     BasicBlock(64, 64),
-    #     BasicBlock(64, 64),
-    #     # Conv 3
-    #     BasicBlock(64, 128),
-    #     BasicBlock(128, 128),
-    #     # Conv 4
-    #     BasicBlock(128, 256),
-    #     BasicBlock(256, 256),
-    #     # Conv 5
-    #     BasicBlock(256, 512),
-    #     BasicBlock(512, 512),
-    # )

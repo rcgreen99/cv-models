@@ -85,6 +85,7 @@ class BasicBlock(nn.Module):
 
         # residual
         x += shortcut
+        x = nn.ReLU()(x)
 
         return x
 
