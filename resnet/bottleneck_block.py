@@ -19,6 +19,61 @@ class BottleneckBlock(nn.Module):
         if self.downsample:
             self.third_conv_stride = 2
 
+        self.conv1 = nn.Conv2d(
+            self.in_features,
+            self.intermediate_features,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            bias=False,
+        )
+        self.bn1 = nn.BatchNorm2d(self.intermediate_features)
+        self.conv2 = nn.Conv2d(
+            self.intermediate_features,
+            self.intermediate_features,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+        )
+        self.bn2 = nn.BatchNorm2d(self.intermediate_features)
+        self.conv3 = nn.Conv2d(
+            self.intermediate_features,
+            self.out_features,
+            kernel_size=1,
+            stride=self.third_conv_stride,
+            padding=0,
+            bias=False,
+        )
+        self.bn3 = nn.BatchNorm2d(self.out_features)
+
+        if self.downsample:
+            self.downsample_layer = nn.Sequential(
+                nn.Conv2d(
+                    self.in_features,
+                    self.out_features,
+                    kernel_size=1,
+                    stride=2,
+                    padding=0,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(self.out_features),
+            )
+        elif self.in_features != self.out_features:
+            self.downsample_layer = nn.Sequential(
+                nn.Conv2d(
+                    self.in_features,
+                    self.out_features,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(self.out_features),
+            )
+
+        self.relu = nn.ReLU(inplace=True)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the block
@@ -29,92 +84,39 @@ class BottleneckBlock(nn.Module):
         shortcut = x
         assert shortcut.shape == (batch_size, self.in_features, image_dim, image_dim)
 
-        # 1st conv
-        x = nn.Conv2d(
-            self.in_features,
-            self.intermediate_features,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=False,
-        )(x)
-        x = nn.BatchNorm2d(self.intermediate_features)(x)
-        x = nn.ReLU()(x)
-        assert x.shape == (
-            batch_size,
-            self.intermediate_features,
-            image_dim,
-            image_dim,
-        )
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        assert x.shape == (batch_size, self.intermediate_features, image_dim, image_dim)
 
-        # 2nd conv
-        x = nn.Conv2d(
-            self.intermediate_features,
-            self.intermediate_features,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False,
-        )(x)
-        x = nn.BatchNorm2d(self.intermediate_features)(x)
-        x = nn.ReLU()(x)
-        assert x.shape == (
-            batch_size,
-            self.intermediate_features,
-            image_dim,
-            image_dim,
-        )
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        assert x.shape == (batch_size, self.intermediate_features, image_dim, image_dim)
 
-        # 3rd conv
-        x = nn.Conv2d(
-            self.intermediate_features,
-            self.out_features,
-            kernel_size=1,
-            stride=self.third_conv_stride,
-            padding=0,
-            bias=False,
-        )(x)
-        x = nn.BatchNorm2d(self.out_features)(x)
+        x = self.conv3(x)
+        x = self.bn3(x)
         # assert x.shape == (batch_size, self.out_features, image_dim, image_dim)
 
-        # if we downsampled, need to use projection shortcut
-        if self.downsample:
-            shortcut = nn.Conv2d(
-                self.in_features,
-                self.out_features,
-                kernel_size=1,
-                stride=2,
-                padding=0,
-                bias=False,
-            )(shortcut)
-            shortcut = nn.BatchNorm2d(self.out_features)(shortcut)
+        if self.downsample or self.in_features != self.out_features:
+            shortcut = self.downsample_layer(shortcut)
             # assert shortcut.shape == (
             #     batch_size,
             #     self.out_features,
-            #     half_image_dim,
-            #     half_image_dim,
+            #     image_dim // 2,
+            #     image_dim // 2,
             # )
-        # if this is the first block of the layer, we need to increase the number of features
-        # to match the output of the block
-        elif self.in_features != self.out_features:
-            shortcut = nn.Conv2d(
-                self.in_features,
+        else:
+            shortcut = x
+            assert shortcut.shape == (
+                batch_size,
                 self.out_features,
-                kernel_size=1,
-                stride=1,
-                padding=0,
-                bias=False,
-            )(shortcut)
-            shortcut = nn.BatchNorm2d(self.out_features)(shortcut)
-            # assert shortcut.shape == (
-            #     batch_size,
-            #     self.out_features,
-            #     image_dim,
-            #     image_dim,
-            # )
-        # residual
+                image_dim,
+                image_dim,
+            )
+
         x += shortcut
-        x = nn.ReLU()(x)
+        x = self.relu(x)
         # assert x.shape == (batch_size, self.out_features, image_dim, image_dim)
 
         return x
