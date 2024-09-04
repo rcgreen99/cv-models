@@ -19,10 +19,20 @@ Naive application of self-attention to images would have each pixel being used a
 ## Method
 
 Model design as similar to original Transformer as possible. The input to the model is a 1D sequence of token embeddings. 
-- To handle 2D images, the images are reshaeped into a sequence of flattened 2D patches known as the patch embeddings. 
+- To handle 2D images, the images are reshaped into a sequence of flattened 2D patches known as the patch embeddings. 
 - Similar to BERT's `[class]` token, a learnable embedding is prepended to the sequence of patch embeddings, whose state at the output of the Transformer encoder serves as the image representation $y$. 
-- A one hidden layer MLP is attatched to the final `[class]` output during pre-training, and by a single linear layer during fine-tuning.
+- A one layer hidden layer MLP is attatched to the final `[class]` output during pre-training, and by a single linear layer during fine-tuning.
 - Position embeddings are added to the patch embeddings to retain positional information. These are standard learnable 1D positional embeddings (since the 2D aware positional embeddings don't seem to improve performance)
 - The Transformer encoder consists of alternating layers of multiheaded self-attention (MSA) and MLP blocks. 
 - Layernorm (LN) is applied before every block, and residual connecitions after every block. 
 - The MLP contains two layers with a GELU non-linearity.
+
+
+- ViTs have much less inductive bias than CNNs
+- Instead of raw image patches, CNN feature maps can be used.
+- Typically pre-trained on large amount of data and then fine-tuned for downstream task
+
+## Experiments
+
+- Pre-training was done on different sized datasets: ILSVRC-2012 Imagenet (1k classes, 1.3M images), ImageNet-21k (21k classes, 14M images), and JFT (18k classes, 303M images).
+- Then, they were trained on benchmark tasks like CIFAR-10/100, Oxford-IIITPets, and Oxford Flowers-102.
