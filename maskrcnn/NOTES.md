@@ -57,3 +57,21 @@ For the *backbone* architecture, ResNet 50 and 101, ResNeXt 50 and 101, and Feat
 For the *heads*, they extend two existing Faster R-CNN heads. One using the fourth stage of ResNet, the other using a FPN.
 
 ## 3.1 Implementation Details
+
+Hyper-parameters the same as Fast/Faster R-CNN.
+
+### Training
+
+As in Fast R-CNN, RoI is considered positive if it has a IoU of at least 0.5 with a ground-truth box, and negative otherwise. The mask loss $L_mask$ is defined only for positive RoIs. The mask target is the intersection between an RoI and its associated ground-truth mask.
+
+- Images resized to 800 pixels for shorter side
+- Each mini-batch has 2 images per GPU and each image has $N$ sampled RoIs, with a ratio of 1:3 of positive to negatives.
+- Trained on 8 GPUs for 160k iterations
+- Learning rate 0.02, decreased by 10 at the 120k iteration.
+- weight decay of 0.0001 and momentum of 0.9
+
+### Inference
+
+During inference, the proposal number is 300 for the C4 backbone and 1000 for FPN. Box prediction is ran on these proposals followed by non-maximum suppression. Then the mask branch is applied to the highest scoring 100 detection boxes. This is different than training where the branches are ran in parallel, but this speeds up infference and improves accuracy (due to fewer, more accurate RoIs). The output $m \times m$ floating points masks are then binarized using a threshold of 0.5.
+
+## Experiments: Instance Segmentation
